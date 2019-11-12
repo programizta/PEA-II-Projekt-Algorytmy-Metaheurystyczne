@@ -133,8 +133,7 @@ namespace II_Projekt
                             SimulatedAnnealing sa = new SimulatedAnnealing(g.Filename, choice);
                             sa.StartSA(t0, tMin, tCoefficient);
                             Console.WriteLine("Najlepszy, oszacowany cykl ma wagę: " + sa.BestCycleCost);
-                            //Console.WriteLine("Optymalny cykl:");
-                            //sa.Route.Display();
+                            sa.Route.Display();
                             Console.WriteLine("\nKoniec. Aby wrócić do głównego menu, kliknij dowolny klawisz...");
                             Console.ReadKey();
                             break;

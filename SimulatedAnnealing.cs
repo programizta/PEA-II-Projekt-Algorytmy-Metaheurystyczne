@@ -9,58 +9,52 @@ namespace II_Projekt
     class SimulatedAnnealing : Graph
     {
         Random randomGenerator;
+        public Stack Route { get; set; }
         const double e = 2.718281828459045;
-        public Stack Route { get; private set; }
         private double temperatureCoefficient;
-        private double minTemperature;
         private double currentTemperature;
-        private int tempCost;
-        private Stack tempRoute;
-        private Stack finalRoute;
+        private readonly int[] tempRoute;
+        private readonly int[] finalRoute;
 
         public SimulatedAnnealing(string filename, int choice) : base(filename, choice)
         {
+            Route = new Stack();
             randomGenerator = new Random();
-            tempRoute = new Stack();
-            finalRoute = new Stack();
+            tempRoute = new int[numOfCities];
+            finalRoute = new int[numOfCities];
             temperatureCoefficient = 0;
-            minTemperature = 0;
             currentTemperature = 0;
         }
 
-        private double GenerateProbability()
+        private int GenerateProbability(int a, int b)
         {
-            double value = Math.Pow(e, (((double)(BestCycleCost - tempCost)) / currentTemperature));
-            if (value < 1.0) return value;
-            return 1.0;
-        }
+            double probabilityValueFromEquation = Math.Pow(e, ((-1 * (b - a)) / currentTemperature));
 
-        /// <summary>
-        /// Metoda zwracająca losową wartość z przedziału [0; 1)
-        /// </summary>
-        /// <returns></returns>
-        private double GenerateRandomProbability()
-        {
-            double probability = randomGenerator.NextDouble();
-            return probability;
-        }
+            double normalProbabilityValue = (double)randomGenerator.Next(int.MaxValue) / int.MaxValue;
 
-        private void SwitchRandomVertexes()
-        {
-            int auxNumber;
-            int indexOfFirstVertex = randomGenerator.Next(0, numOfCities - 1);
-            int indexOfSecondVertex;
-
-            // losuj drugą liczbę dopóki są takie same
-            do
+            if (normalProbabilityValue < probabilityValueFromEquation)
             {
-                indexOfSecondVertex = randomGenerator.Next(0, numOfCities - 1);
-            } while (indexOfFirstVertex == indexOfSecondVertex);
+                return 1;
+            }
+            return 0;
+        }
 
-            auxNumber = finalRoute.numbersOnStack[indexOfFirstVertex];
-            tempRoute = finalRoute;  //???? co ja tu miałem na myśli?
-            tempRoute.numbersOnStack[indexOfFirstVertex] = tempRoute.numbersOnStack[indexOfSecondVertex];
-            tempRoute.numbersOnStack[indexOfSecondVertex] = auxNumber;
+        private void GeneratePermutation(int[] arrayOfIndexes)
+        {
+            int randomIndex;
+            int[] auxMatrix = new int[numOfCities];
+
+            for (int i = 0; i < numOfCities; i++)
+            {
+                auxMatrix[i] = i;
+            }
+
+            for (int i = numOfCities; i > 0; i--)
+            {
+                randomIndex = randomGenerator.Next(int.MaxValue) % i;
+                arrayOfIndexes[i - 1] = auxMatrix[randomIndex];
+                auxMatrix[randomIndex] = auxMatrix[i - 1];
+            }
         }
 
         private void ArithmeticTemperatureComputation()
@@ -78,69 +72,93 @@ namespace II_Projekt
             currentTemperature = tempMax;
         }
 
-        private int GetPathLength(Stack currentRoute)
+        private int GetPathLength(int[] indexMatrix)
         {
             int weightOfPath = 0;
-            int rowHolder = 0;
 
-            // indeksuje od 1, ponieważ wierzchołek startowy, dla którego
-            // obliczam koszt ścieżki jest równy 0
-            for (int i = 1; i < numOfCities; i++)
+            for (int i = 0; i < numOfCities - 1; i++)
             {
-                // nie mozemy dopuscic do doliczenia do cyklu wartosc na przekatnej
-                if (costMatrix[rowHolder, currentRoute.numbersOnStack[i]] != int.MaxValue)
-                {
-                    weightOfPath += costMatrix[rowHolder, currentRoute.numbersOnStack[i]];
-                }
-                rowHolder = currentRoute.numbersOnStack[i];
+                weightOfPath += costMatrix[indexMatrix[i], indexMatrix[i + 1]];
             }
+            weightOfPath += costMatrix[indexMatrix[numOfCities - 1], indexMatrix[0]];
 
-            // dodanie ścieżki do wierzchołka początkowego (zamykamy cykl)
-            weightOfPath += costMatrix[rowHolder, 0];
             return weightOfPath;
+        }
+
+        private void CopyFromTo(int[] from, int[] to)
+        {
+            for (int i = 0; i < numOfCities; i++)
+            {
+                to[i] = from[i];
+            }
         }
 
         public void StartSA(double tMax, double tMin, double tCoefficient)
         {
-            temperatureCoefficient = tCoefficient;
+            int firstIndex;
+            int secondIndex;
+            int a, b;
+            double temporaryDifference, difference = 0;
             currentTemperature = tMax;
-            minTemperature = tMin;
+            temperatureCoefficient = tCoefficient;
 
-            // wygenerowanie losowego wierzcholka startowego
-            int x0 = randomGenerator.Next(0, numOfCities - 1);
-
-            // wrzucenie cyklu do finalnej drogi od wierzcholka poczatkowego
-            for (int i = x0; i < numOfCities; i++)
+            for (int i = 0; i < numOfCities; i++)
             {
-                finalRoute.Push(i);
-            }
-            for (int i = 0; i < x0; i++)
-            {
-                finalRoute.Push(i);
-            }
-            //finalRoute.push_back(cities) = x0;
+                GeneratePermutation(finalRoute);
+                GeneratePermutation(tempRoute);
 
-            tempRoute = finalRoute;
-            BestCycleCost = GetPathLength(tempRoute);
-            tempCost = BestCycleCost;
+                temporaryDifference = Math.Abs(GetPathLength(finalRoute) - GetPathLength(tempRoute));
 
-            while (currentTemperature > minTemperature)
-            {
-                SwitchRandomVertexes();
-                tempCost = GetPathLength(tempRoute);
-
-                if (tempCost < BestCycleCost)
+                if (temporaryDifference > difference)
                 {
-                    BestCycleCost = tempCost;
-                    finalRoute = tempRoute;
+                    difference = temporaryDifference;
                 }
-                else if (GenerateRandomProbability() < GenerateProbability())
+            }
+            currentTemperature = difference;
+
+            GeneratePermutation(finalRoute);
+            a = GetPathLength(finalRoute);
+            CopyFromTo(finalRoute, tempRoute);
+
+            while (currentTemperature > tMin)
+            {
+                firstIndex = randomGenerator.Next(int.MaxValue) % numOfCities;
+
+                do
                 {
-                    BestCycleCost = tempCost;
-                    finalRoute = tempRoute;
+                    secondIndex = randomGenerator.Next(int.MaxValue) % numOfCities;
+                } while (firstIndex == secondIndex);
+
+                tempRoute[secondIndex] = finalRoute[firstIndex];
+                tempRoute[firstIndex] = finalRoute[secondIndex];
+
+                b = GetPathLength(tempRoute);
+
+                if (b <= a || GenerateProbability(a, b) == 1)
+                {
+                    a = b;
+
+                    if (a <= BestCycleCost)
+                    {
+                        BestCycleCost = a;
+                        Route.Clear();
+
+                        for (int i = 0; i < numOfCities; i++)
+                        {
+                            Route.Push(tempRoute[i]);
+                        }
+                        Route.Push(tempRoute[0]);
+                    }
+
+                    finalRoute[firstIndex] = tempRoute[firstIndex];
+                    finalRoute[secondIndex] = tempRoute[secondIndex];
+                }
+                else
+                {
+                    tempRoute[firstIndex] = finalRoute[firstIndex];
+                    tempRoute[secondIndex] = finalRoute[secondIndex];
                 }
                 GeometricTemperatureComputation();
-                //ArithmeticTemperatureComputation();
             }
         }
     }
