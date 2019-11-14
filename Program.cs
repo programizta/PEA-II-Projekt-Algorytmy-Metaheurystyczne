@@ -82,11 +82,19 @@ namespace II_Projekt
                             Console.Clear();
                             Console.Write("Podaj współczynnik wyżarzania z zakresu [0; 1): ");
                             tCoefficient = double.Parse(Console.ReadLine());
+<<<<<<< HEAD
                             Console.Write("Wprowadź początkową temperaturę wyżarzania (większą od 0): ");
                             maxTemperature = double.Parse(Console.ReadLine());
                             Console.Write("Wprowadź minimalną temperaturę wyżarzania (większą od 0): ");
                             minTemperature = double.Parse(Console.ReadLine());
                             Console.Write("\nAby kontynuować kliknij [ENTER]");
+=======
+                            SimulatedAnnealing sa = new SimulatedAnnealing(g.Filename, choice);
+                            sa.StartSA(t0, tMin, tCoefficient);
+                            Console.WriteLine("Najlepszy, oszacowany cykl ma wagę: " + sa.BestCycleCost);
+                            sa.Route.Display();
+                            Console.WriteLine("\nKoniec. Aby wrócić do głównego menu, kliknij dowolny klawisz...");
+>>>>>>> 76221b8411b8de11b27990b67913853dc599f560
                             Console.ReadKey();
                             break;
                         }
