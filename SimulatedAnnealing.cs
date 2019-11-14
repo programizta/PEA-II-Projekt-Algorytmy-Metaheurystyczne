@@ -1,147 +1,156 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace II_Projekt
 {
     class SimulatedAnnealing : Graph
     {
         Random randomGenerator;
+        public Stack Route { get; set; }
         const double e = 2.718281828459045;
-        public Stack Route { get; private set; }
         private double temperatureCoefficient;
-        private double minTemperature;
         private double currentTemperature;
-        private int tempCost;
-        private Stack tempRoute;
-        private Stack finalRoute;
+        private readonly int[] tempRoute;
+        private readonly int[] finalRoute;
+        int tempCost;
 
         public SimulatedAnnealing(string filename, int choice) : base(filename, choice)
         {
+            Route = new Stack();
             randomGenerator = new Random();
-            tempRoute = new Stack();
-            finalRoute = new Stack();
+            tempRoute = new int[numOfCities];
+            finalRoute = new int[numOfCities];
             temperatureCoefficient = 0;
-            minTemperature = 0;
             currentTemperature = 0;
+            tempCost = 0;
         }
 
+        /// <summary>
+        /// Metoda zwracająca wartość prawdopodobieństwa, która jest zgodna ze wzorem
+        /// p = e^((najlepszy_koszt_cyklu - aktualny_koszt_cyklu) / aktualna_temperatura_wyzarzania)
+        /// </summary>
+        /// <returns></returns>
         private double GenerateProbability()
         {
-            double value = Math.Pow(e, (((double)(BestCycleCost - tempCost)) / currentTemperature));
+            double value = Math.Pow(e, ((BestCycleCost - tempCost) / currentTemperature));
+
             if (value < 1.0) return value;
             return 1.0;
         }
 
         /// <summary>
-        /// Metoda zwracająca losową wartość z przedziału [0; 1)
+        /// Metoda zwracająca wartość prawdopodobieństwa z przedziału [0, 1]
         /// </summary>
         /// <returns></returns>
         private double GenerateRandomProbability()
         {
-            double probability = randomGenerator.NextDouble();
-            return probability;
+            return (double)randomGenerator.Next(0, int.MaxValue) / int.MaxValue;
         }
 
-        private void SwitchRandomVertexes()
+        /// <summary>
+        /// Metoda służąca do wygenerowania nowej permutacji wierzchołków w grafie
+        /// dokonując przestawienia dwóch losowych wierzchołków
+        /// </summary>
+        /// <param name="firstIndex"></param>
+        /// <param name="secondIndex"></param>
+        private void GeneratePermutation()
         {
             int auxNumber;
-            int indexOfFirstVertex = randomGenerator.Next(0, numOfCities - 1);
-            int indexOfSecondVertex;
+            int firstIndex = randomGenerator.Next(0, numOfCities - 1);
+            int secondIndex;
 
-            // losuj drugą liczbę dopóki są takie same
             do
             {
-                indexOfSecondVertex = randomGenerator.Next(0, numOfCities - 1);
-            } while (indexOfFirstVertex == indexOfSecondVertex);
+                secondIndex = randomGenerator.Next(0, numOfCities - 1);
+            } while (firstIndex == secondIndex);
 
-            auxNumber = finalRoute.numbersOnStack[indexOfFirstVertex];
-            tempRoute = finalRoute;  //???? co ja tu miałem na myśli?
-            tempRoute.numbersOnStack[indexOfFirstVertex] = tempRoute.numbersOnStack[indexOfSecondVertex];
-            tempRoute.numbersOnStack[indexOfSecondVertex] = auxNumber;
+            auxNumber = finalRoute[firstIndex];
+
+            CopyFromTo(finalRoute, tempRoute);
+
+            tempRoute[firstIndex] = tempRoute[secondIndex];
+            tempRoute[secondIndex] = auxNumber;
         }
 
-        private void ArithmeticTemperatureComputation()
-        {
-            currentTemperature -= temperatureCoefficient;
-        }
-
+        /// <summary>
+        /// Metoda generująca w sposób geometryczny nową temperaturę wyżarzania
+        /// </summary>
         private void GeometricTemperatureComputation()
         {
             currentTemperature *= temperatureCoefficient;
         }
 
-        void SetTemperature(double tempMax)
-        {
-            currentTemperature = tempMax;
-        }
-
-        private int GetPathLength(Stack currentRoute)
+        /// <summary>
+        /// Metoda służąca do obliczenia kosztu cyklu Hamiltona
+        /// </summary>
+        /// <param name="indexMatrix"></param>
+        /// <returns></returns>
+        private int GetPathLength(int[] indexMatrix)
         {
             int weightOfPath = 0;
-            int rowHolder = 0;
 
-            // indeksuje od 1, ponieważ wierzchołek startowy, dla którego
-            // obliczam koszt ścieżki jest równy 0
-            for (int i = 1; i < numOfCities; i++)
+            for (int i = 0; i < numOfCities - 1; i++)
             {
-                // nie mozemy dopuscic do doliczenia do cyklu wartosc na przekatnej
-                if (costMatrix[rowHolder, currentRoute.numbersOnStack[i]] != int.MaxValue)
-                {
-                    weightOfPath += costMatrix[rowHolder, currentRoute.numbersOnStack[i]];
-                }
-                rowHolder = currentRoute.numbersOnStack[i];
+                weightOfPath += costMatrix[indexMatrix[i], indexMatrix[i + 1]];
             }
+            weightOfPath += costMatrix[indexMatrix[numOfCities - 1], indexMatrix[0]];
 
-            // dodanie ścieżki do wierzchołka początkowego (zamykamy cykl)
-            weightOfPath += costMatrix[rowHolder, 0];
             return weightOfPath;
         }
 
-        public void StartSA(double tMax, double tMin, double tCoefficient)
+        /// <summary>
+        /// Metoda kopiująca zawartość tablic
+        /// from - tablica, z której chcemy skopiować zawartość
+        /// to - tablica, do której chcemy przekopiować zawartość z tablicy from
+        /// </summary>
+        /// <param name="from"></param>
+        /// <param name="to"></param>
+        private void CopyFromTo(int[] from, int[] to)
+        {
+            for (int i = 0; i < numOfCities; i++)
+            {
+                to[i] = from[i];
+            }
+        }
+
+        /// <summary>
+        /// Metoda rozwiązująca problem komiwojażera wykonując algorytm symulowanego wyżarzania
+        /// </summary>
+        /// <param name="minTemperature"></param>
+        /// <param name="maxTemperature"></param>
+        /// <param name="tCoefficient"></param>
+        public void StartSA(double minTemperature, double maxTemperature, double tCoefficient)
         {
             temperatureCoefficient = tCoefficient;
-            currentTemperature = tMax;
-            minTemperature = tMin;
+            currentTemperature = maxTemperature;
 
-            // wygenerowanie losowego wierzcholka startowego
-            int x0 = randomGenerator.Next(0, numOfCities - 1);
-
-            // wrzucenie cyklu do finalnej drogi od wierzcholka poczatkowego
-            for (int i = x0; i < numOfCities; i++)
+            for (int j = 0; j < numOfCities; j++)
             {
-                finalRoute.Push(i);
+                finalRoute[j] = j;
             }
-            for (int i = 0; i < x0; i++)
-            {
-                finalRoute.Push(i);
-            }
-            //finalRoute.push_back(cities) = x0;
 
-            tempRoute = finalRoute;
+            CopyFromTo(finalRoute, tempRoute);
+
             BestCycleCost = GetPathLength(tempRoute);
             tempCost = BestCycleCost;
 
             while (currentTemperature > minTemperature)
             {
-                SwitchRandomVertexes();
+                GeneratePermutation();
                 tempCost = GetPathLength(tempRoute);
 
-                if (tempCost < BestCycleCost)
+                if ((tempCost < BestCycleCost) || (GenerateRandomProbability() < GenerateProbability()))
                 {
                     BestCycleCost = tempCost;
-                    finalRoute = tempRoute;
-                }
-                else if (GenerateRandomProbability() < GenerateProbability())
-                {
-                    BestCycleCost = tempCost;
-                    finalRoute = tempRoute;
+                    CopyFromTo(tempRoute, finalRoute);
                 }
                 GeometricTemperatureComputation();
-                //ArithmeticTemperatureComputation();
             }
+
+            for (int j = 0; j < numOfCities; j++)
+            {
+                Route.Push(finalRoute[j]);
+            }
+            Route.Push(finalRoute[0]);
         }
     }
 }
