@@ -5,7 +5,7 @@ namespace II_Projekt
     class Stack
     {
         public int StackSize { get; private set; }
-        public int[] numbersOnStack;
+        private int[] numbersOnStack;
 
         public Stack()
         {
@@ -65,6 +65,11 @@ namespace II_Projekt
             {
                 Pop();
             }
+        }
+
+        public int GetElement(int index)
+        {
+            return numbersOnStack[index];
         }
     }
 }

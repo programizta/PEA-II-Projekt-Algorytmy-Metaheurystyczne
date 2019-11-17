@@ -8,55 +8,13 @@ namespace II_Projekt
         static string filename;
         static int choice;
 
-        static void Tests()
-        {
-            int repeats;
-            int choiceNumber;
-            Console.Clear();
-            Console.Write("Ile powtórzeń chciałbyś wykonać? Podaj liczbę: ");
-            repeats = int.Parse(Console.ReadLine());
-            while (true)
-            {
-                Console.Clear();
-                Console.WriteLine("\nMożliwości do wyboru:\n");
-                Console.WriteLine("1. Symulowane wyżarzanie");
-                Console.WriteLine("2. Powrót do głównego menu\n");
-                Console.Write("Którą opcję wybierasz? Wprowadź jej numer: ");
-                choiceNumber = int.Parse(Console.ReadLine());
-
-                switch (choiceNumber)
-                {
-                    case 1:
-                        {
-                            Stopwatch stopWatch = new Stopwatch();
-                            stopWatch.Start();
-                            for (int i = 0; i < repeats; i++)
-                            {
-                                //BruteForce bf = new BruteForce(filename, choice);
-                                //bf.StartBruteForce(0);
-                            }
-                            stopWatch.Stop();
-                            TimeSpan ts = stopWatch.Elapsed;
-                            Console.WriteLine("\nŚredni czas wykonania algorytm symulowanego wyżarzania wynosi " + ts.TotalMilliseconds / repeats + " ms");
-                            Console.ReadKey();
-                            break;
-                        }
-                    case 2: return;
-                    default:
-                        {
-                            Console.Clear();
-                            Console.WriteLine("Taka opcja nie istnieje!");
-                            Console.ReadKey();
-                            break;
-                        }
-                }
-            }
-        }
-
         static void Main(string[] args)
         {
             Graph g = new Graph();
             string filename;
+            double tCoefficient = 0;
+            double minTemperature = 0;
+            double maxTemperature = 0;
             int numOfChoice;
 
             while (true)
@@ -76,12 +34,11 @@ namespace II_Projekt
                 }
 
                 Console.WriteLine("Możliwości do wyboru: ");
-                Console.WriteLine("1. Wczytaj małą macierz grafu");
-                Console.WriteLine("2. Wczytaj dużą macierz grafu");
-                Console.WriteLine("3. Wyświetl macierz kosztów");
+                Console.WriteLine("1. Wczytaj macierz grafu");
+                Console.WriteLine("2. Wyświetl macierz kosztów");
+                Console.WriteLine("3. Podaj parametry do symulowanego wyżarzania");
                 Console.WriteLine("4. Rozwiąż problem komiwojażera za pomocą metody symulowanego wyżarzania");
-                Console.WriteLine("5. Przeprowadź testy seryjne");
-                Console.WriteLine("6. Zakończ działanie programu\n");
+                Console.WriteLine("5. Zakończ działanie programu\n");
                 Console.Write("Którą opcję chcesz wybrać? Podaj numer: ");
                 numOfChoice = int.Parse(Console.ReadLine());
 
@@ -91,8 +48,10 @@ namespace II_Projekt
                         {
                             choice = 0;
                             Console.Clear();
-                            Console.Write("Podaj nazwę pliku z małym grafem: ");
+                            Console.Write("Podaj nazwę pliku z grafem: ");
                             filename = Console.ReadLine();
+                            if (filename.Contains(".t")) choice = 0;
+                            else choice = 1;
                             g = new Graph(filename, choice);
                             Console.Write("Wczytano graf z " + g.GetNumberOfCities() + " wierzchołkami\nAby kontynuować kliknij [ENTER]");
                             Program.filename = filename;
@@ -101,18 +60,6 @@ namespace II_Projekt
                         }
                     case 2:
                         {
-                            choice = 1;
-                            Console.Clear();
-                            Console.Write("Podaj nazwę pliku z dużym grafem: ");
-                            filename = Console.ReadLine();
-                            g = new Graph(filename, choice);
-                            Console.Write("Wczytano graf z " + g.GetNumberOfCities() + " wierzchołkami\nAby kontynuować kliknij [ENTER]");
-                            Program.filename = filename;
-                            Console.ReadKey();
-                            break;
-                        }
-                    case 3:
-                        {
                             Console.Clear();
                             if (g.GetNumberOfCities() != 0) g.DisplayCostMatrix();
                             else Console.WriteLine("Nie wczytano żadnego grafu do programu!");
@@ -120,31 +67,34 @@ namespace II_Projekt
                             Console.ReadKey();
                             break;
                         }
-                    case 4:
+                    case 3:
                         {
-                            double t0, tMin, tCoefficient;
                             Console.Clear();
-                            Console.Write("Podaj temperaturę początkową wyżarzania: ");
-                            t0 = double.Parse(Console.ReadLine());
-                            Console.Write("Podaj minimalną temperaturę wyżarzania: ");
-                            tMin = double.Parse(Console.ReadLine());
                             Console.Write("Podaj współczynnik wyżarzania z zakresu [0; 1): ");
                             tCoefficient = double.Parse(Console.ReadLine());
+                            Console.Write("Wprowadź początkową temperaturę wyżarzania (większą od 0): ");
+                            maxTemperature = double.Parse(Console.ReadLine());
+                            Console.Write("Wprowadź minimalną temperaturę wyżarzania (większą od 0): ");
+                            minTemperature = double.Parse(Console.ReadLine());
+                            Console.Write("\nAby kontynuować kliknij [ENTER]");
+                            Console.ReadKey();
+                            break;
+                        }
+                    case 4:
+                        {
+                            Console.Clear();
                             SimulatedAnnealing sa = new SimulatedAnnealing(g.Filename, choice);
-                            sa.StartSA(t0, tMin, tCoefficient);
+                            sa.StartSA(minTemperature, maxTemperature, tCoefficient);
+                            Console.WriteLine("Średni czas w ms: " + sa.Time);
+                            //Console.WriteLine("Średnia waga cyklu: " + sa.TotalCost);
                             Console.WriteLine("Najlepszy, oszacowany cykl ma wagę: " + sa.BestCycleCost);
-                            //Console.WriteLine("Optymalny cykl:");
-                            //sa.Route.Display();
+                            Console.WriteLine("\nOszacowana ścieżka:");
+                            sa.Route.Display();
                             Console.WriteLine("\nKoniec. Aby wrócić do głównego menu, kliknij dowolny klawisz...");
                             Console.ReadKey();
                             break;
                         }
                     case 5:
-                        {
-                            Tests();
-                            break;
-                        }
-                    case 6:
                         {
                             Console.Write("\nZakończono działanie programu\nAby kontynuować kliknij [ENTER]");
                             Console.ReadKey();
